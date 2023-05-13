@@ -21,7 +21,7 @@ Plot bounding boxes on image from md results
 }
 \examples{
 \dontrun{
-mdres<-classifyImageMD(mdsession,images$FilePath[30000])
-plotBoxes(mdres,minconf = 0.5)
+mdres <- classifyImageMD(mdsession, images$FilePath[30000])
+plotBoxes(mdres, minconf = 0.5)
 }
 }

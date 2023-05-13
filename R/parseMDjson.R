@@ -1,13 +1,15 @@
-#' parse MD JSON results file
+#############################################
+#' converte the JSON file produced bye the
+#' Python version of MegaDetector into the format
+#' produced by detectObjectBatch
 #'
-#' @param json md output file
-#'
-#' @return list of MD detections
-#' @export
+#' @param json json data in a list format
+#' 
+#' @return a list of MegaDetector results
 #'
 #' @examples
 #' \dontrun{
-#' mdres <- parseMDjson("MDresults.json")
+#' mdresults <- parseMDjson(json)
 #' }
 parseMDjson<-function(json){
   results<-json[[1]]
@@ -40,31 +42,7 @@ parseMDjson<-function(json){
   pbapply::setpb(pb,length(results))
   pbapply::closepb(pb)
   if(length(delete)>0)
-    results[-delete]
+    results[-delete] 
   else
     results
-}
-
-#' parse MD JSON results file into a simple dataframe
-#'
-#' @param mdresults raw MegaDetector output
-#'
-#' @return flattened dataframe of results
-#' @export
-#'
-#' @examples
-#' \dontrun{
-#' mdresults <- parseMDsimple(mdres)
-#' }
-parseMDsimple<-function(mdresults){
-  f<-function(data){
-    if(nrow(data$detections)>0){
-      data.frame(Frame=data$FilePath,max_detection_conf=data$max_detection_conf,max_detection_category=data$max_detection_category,data$detections,stringsAsFactors = F)
-    }else{
-
-      data.frame(Frame=data$FilePath,max_detection_conf=data$max_detection_conf,max_detection_category=data$max_detection_category,category=0,conf=NA,bbox1=NA,bbox2=NA,bbox3=NA,bbox4=NA,stringsAsFactors = F)}
-  }
-  results<-do.call(rbind.data.frame,sapply(mdresults,f,simplify = F))
-  colnames(results)[4:5]<-c("md_class","md_confidence")
-  results
 }
