@@ -1,4 +1,4 @@
-# animl v1.0.0
+# animl v2.0.0
 
 Animl comprises a variety of machine learning tools for analyzing ecological data. The package includes a set of functions to classify subjects within camera trap field data and can handle both images and videos. 
 
@@ -21,38 +21,29 @@ library(animl)
 imagedir <- "examples/TestData"
 
 #create save-file placeholders and working directories
-setupDirectory(imagedir)
+WorkingDirectory(imagedir,globalenv())
 
 # Read exif data for all images within base directory
-files <- buildFileManifest(imagedir)
-
-# Set Region/Site/Camera names based on folder hierarchy
-files <- setLocation(files,imagedir)
+files <- build_file_manifest(imagedir, out_file=filemanifest, exif=TRUE)
 
 # Process videos, extract frames for ID
-imagesall<-imagesFromVideos(files,outdir=vidfdir,frames=5)
+allframes <- extract_frames(files, out_dir = vidfdir, out_file=imageframes,
+                           frames=2, parallel=T, workers=parallel::detectCores())
 ```
 #### 2. Object Detection
 
 This produces a dataframe of images, including frames taken from any videos to be fed into the classifier. The authors recommend a two-step approach using Microsoft's 'MegaDector' object detector to first identify potential animals and then using a second classification model trained on the species of interest. 
 
-MegaDetector can obtained from
-https://github.com/microsoft/CameraTraps/blob/main/megadetector.md
-
+More info on [MegaDetector](https://github.com/agentmorris/MegaDetector/tree/main).
 ```R
 #Load the Megadetector model
-mdsession<-loadMDModel("/path/to/megaDetector/megadetector_v4.1.pb")
+md_py <- megadetector("/mnt/machinelearning/megaDetector/md_v5a.0.0.pt")
 
-#+++++++++++++++++++++
-# Classify a single image to make sure everything works before continuing
-testMD(imagesall,mdsession)
-#+++++++++++++++++++++
-
-# Obtain crop information for each image, checkpoint MegaDetector after every 2500 images
-mdres <- classifyImagesBatchMD(mdsession,imagesall$Frame,resultsfile=paste0(datadir,mdresults),checkpoint = 2500)
+# Obtain crop information for each image
+mdraw <- detect_MD_batch(md_py, allframes)
 
 # Add crop information to dataframe
-imagesall <- parseMDsimple(imagesall, mdres)
+mdresults <- parse_MD(mdraw, manifest = allframes, out_file = detections)
 
 ```
 #### 3. Classification
@@ -60,56 +51,76 @@ Then feed the crops into the classifier. We recommend only classifying crops ide
 
 ```R
 # Pull out animal crops
-animals <- imagesall[imagesall$max_detection_category==1,]
+animals <- get_animals(mdresults)
 
 # Set of crops with MD human, vehicle and empty MD predictions. 
-empty <- setEmpty(imagesall)
+empty <- get_empty(mdresults)
 
+model_file <- "/Models/Southwest/v3/southwest_v3.pt"
+class_list <- "/Models/Southwest/v3/southwest_v3_classes.csv"
 
-modelfile <- "/Models/Southwest/EfficientNetB5_456_Unfrozen_01_0.58_0.82.h5"
+# load the model
+southwest <- load_model(model_file, class_list)
 
-# Obtain predictions for each animal crop
-pred<-classifySpecies(animals,modelfile,resize=456,standardize=FALSE,batch_size = 64,workers=8)
+# obtain species predictions
+animals <- predict_species(animals, southwest[[1]], southwest[[2]], raw=FALSE)
 
-# Apply human-readable class name to dataframe
-# Classes are stored as text file
-# Returns a table with number of crops identified for each species
-alldata <- applyPredictions(animals,empty,"/Models/Southwest/classes.txt",pred, counts = TRUE)
-
-# Lastly pool crops to get one prediction per file
-alldata <- poolCrops(alldata)
+# recombine animal detections with remaining detections
+manifest <- rbind(animals,empty)
 
 ```
 
-## Models
-All of our pre-trained classification models can be obtained at [https://]
+If your data includes videos or sequences, we recommend using the sequenceClassification algorithm.
+This requires the raw output of the prediction algorithm.
 
-Geographical regions represented:
-* South America
-* African Savanna
-* Southwest United States
+```
+classes = southwest[[2]]$Code
+
+# Sequence Classification
+pred <- predict_species(animals, southwest[[1]], southwest[[2]], raw=TRUE)
+manifest <- sequenceClassification(animals, empty=empty, pred, classes, "Station", emptyclass="empty")
+```
+
+# Models
+
+The Conservation Technology Lab has several [models](https://sandiegozoo.app.box.com/s/9f3xuqldvg9ysaix9c9ug8tdcrmc2eqx) available for use. 
 
 ## Installation
 
 #### Requirements
-* R >= 4.0 
-* Python >= 3.7
-* Tensorflow >= 2.5
+* R >= 4.0
+* Reticulate
+* Python >= 3.9
+* [Animl-Py = 1.4.3](https://github.com/conservationtechlab/animl-py)
 
 We recommend running animl on a computer with a dedicated GPU.
+Animl also depends on [exiftool](https://exiftool.org/index.html) for accessing file metadata.
 
 #### Python
 animl depends on python and will install python package dependencies if they are not available if installed via CRAN. <br> 
 However, we recommend setting up a conda environment using the provided config file. 
 
-[Instructions to install conda](https://conda.io/projects/conda/en/latest/user-guide/install/index.html)
+[Instructions to install conda](https://docs.conda.io/projects/conda/en/latest/user-guide/install/index.html)
 
-The file **animl-env.yml** describes the python version and various dependencies with specific version numbers. 
-To create the enviroment, from within the animl directory run the following line in a terminal:
+The R version of animl depends on the python version to handle the machine learning:
+[animl-py](https://github.com/conservationtechlab/animl-py)
+
+Next, install animl-py in your preferred python environment (such as conda) using pip:
 ```
-conda env create -f animl-env.yml
+pip install animl
 ```
-The first line creates the enviroment from the specifications file which only needs to be done once. 
-This environment is also necessary for the [python version of animl.](https://pypi.org/project/animl/) 
+
+Animl-r can be installed through CRAN:
+```R
+install.packages('animl')
+```
+Animl-r can also be installed by downloading this repo, opening the animl.Rproj file in RStudio and selecting Build -> Install Package.
 
 
+### Contributors
+
+Kyra Swanson <br>
+Mathias Tobler <br> 
+Edgar Navarro <br>
+Josh Kessler <br>
+Jon Kohler <br>
