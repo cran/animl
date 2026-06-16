@@ -1,4 +1,4 @@
-# animl v3.1.1
+# animl v3.3.0
 
 Animl comprises a variety of machine learning tools for analyzing ecological data. The package includes a set of functions to classify subjects within camera trap field data and can handle both images and videos. 
 
@@ -25,20 +25,18 @@ imagedir <- "examples/TestData"
 WorkingDirectory(imagedir, globalenv())
 
 # Read exif data for all images within base directory
-files <- build_file_manifest(imagedir, out_file=filemanifest_file, exif=TRUE)
+files <- build_file_manifest(imagedir, out_file=filemanifest_file, exif=TRUE, data_timezone="America/Los_Angeles")
 
 # Process videos, extract frames for ID
 allframes <- extract_frames(files, frames=3, out_file=imageframes_file,
-                            parallel=T, num_workers=parallel::detectCores())
+                            parallel=T, num_workers=4)
 
 ```
 #### 2. Object Detection
 
-This produces a dataframe of images, including frames taken from any videos to be fed into the classifier. The authors recommend a two-step approach using the 'MegaDector' object detector to first identify potential animals and then using a second classification model trained on the species of interest. 
-
-More info on <br>
-[MegaDetector v5/v1000](https://github.com/agentmorris/MegaDetector/tree/main) <br>
-[MegaDetector v6](https://microsoft.github.io/CameraTraps/megadetector/) 
+This produces a dataframe of images, including frames taken from any videos to be fed into the classifier. 
+The authors recommend a two-step approach using the 'MegaDector' object detector to first identify potential 
+animals and then using a second classification model trained on the species of interest. 
 
 ```R
 #Load the Megadetector model
@@ -108,17 +106,12 @@ Or a .csv file for Timelapse
 manifest <- export_folders(manifest, out_dir=linkdir)
 ```
 
-
-
-
-
-
 # Models
 
 The Conservation Technology Lab has several [models](https://sandiegozoo.app.box.com/s/9f3xuqldvg9ysaix9c9ug8tdcrmc2eqx) available for use. <br><br>
 Detectors:
 [MegaDetector v5/v1000](https://github.com/agentmorris/MegaDetector/tree/main) <br>
-[MegaDetector v6](https://microsoft.github.io/CameraTraps/megadetector/) 
+[MegaDetector v6](https://microsoft.github.io/MegaDetector/) 
 
 
 # Installation
@@ -127,7 +120,7 @@ Detectors:
 * R >= 4.0
 * Reticulate
 * Python >= 3.12
-* [Animl-Py >= 3.1.1](https://github.com/conservationtechlab/animl-py)
+* [Animl-Py >= 3.3.0](https://github.com/conservationtechlab/animl-py)
 
 We recommend running animl on a computer with a dedicated GPU.
 
@@ -141,18 +134,25 @@ Animl-r can be installed through CRAN:
 ```R
 install.packages('animl')
 ```
-Animl will install animl-py and associated dependencies.
+
+You must then set up the environment and install animl-py:
+```R
+library(animl)
+animl::animl_install()
+```
+
+You will be prompted to restart your R session.
+
 
 Animl-r can also be installed by downloading this repo, opening the animl.Rproj file in RStudio and selecting Build -> Install Package.
 
 
 # Release Notes 
-## New for 3.1.1
- - compatible with animl-py v3.1.1
- - add export_camtrapR()
- - handle on the fly video frame generation
- - bug fixes
- - correct examples and documentation to reflect above changes
+## New for 3.3.0
+ - compatible with animl-py v3.3.0
+ - add data_timezone arg to build_file_manifest for automatic timestamp handling
+ - add support for video metadata timestamp via Exiftool 
+ - minor bug fixes
 
 
 ### Contributors

@@ -10,6 +10,8 @@ export_folders(
   out_file = NULL,
   label_col = "prediction",
   file_col = "filepath",
+  timestamp_col = "datetime",
+  station_col = "station",
   unique_name = "uniquename",
   copy = FALSE
 )
@@ -21,9 +23,13 @@ export_folders(
 
 \item{out_file}{if provided, save the manifest to this file}
 
-\item{label_col}{specify 'prediction' for species or 'category' for megadetector class}
+\item{label_col}{specify 'prediction' for species or 'category_label' for megadetector class}
 
 \item{file_col}{Colun containing file paths}
+
+\item{timestamp_col}{column containing timestamps in format "\%Y-\%m-\%d \%H:\%M:\%S"}
+
+\item{station_col}{column containing station names}
 
 \item{unique_name}{Unique image name identifier}
 
